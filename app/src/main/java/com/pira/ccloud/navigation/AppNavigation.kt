@@ -17,6 +17,7 @@ import com.pira.ccloud.screens.SingleMovieScreen
 import com.pira.ccloud.screens.SingleSeriesScreen
 import com.pira.ccloud.screens.SplashScreen
 import com.pira.ccloud.screens.FavoritesScreen
+import com.pira.ccloud.screens.ContinueWatchingScreen
 import com.pira.ccloud.screens.CountryScreen
 import com.pira.ccloud.ui.movies.MoviesViewModel
 import com.pira.ccloud.ui.search.SearchViewModel
@@ -86,6 +87,9 @@ fun AppNavigation(
         }
         composable(route = AppScreens.Settings.route) {
             SettingsScreen(onThemeSettingsChanged, onFontSettingsChanged, navController) // Pass font settings callback
+        }
+        composable(route = AppScreens.ContinueWatching.route) {
+            ContinueWatchingScreen(navController)
         }
         composable(route = AppScreens.Favorites.route) {
             FavoritesScreen(navController)
