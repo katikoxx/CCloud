@@ -161,6 +161,8 @@ class VideoPlayerActivity : ComponentActivity() {
                 putExtra(EXTRA_SERIES_ID, seriesId)
                 putExtra(EXTRA_SEASON_ID, seasonId)
                 putExtra(EXTRA_EPISODE_ID, episodeId)
+                putExtra(EXTRA_MEDIA_KEY, "episode:$seriesId:$seasonId:$episodeId")
+                putExtra(EXTRA_MEDIA_TITLE, "Episode $episodeId")
             }
             context.startActivity(intent)
         }
@@ -446,6 +448,9 @@ fun VideoPlayerScreen(
                 .build().apply {
                     try {
                         setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+                        // ExoPlayer queues a seek requested before preparation, so restore
+                        // remains reliable even if STATE_READY arrives before listeners attach.
+                        savedProgress?.positionMs?.takeIf { it > 0L }?.let { seekTo(it) }
                         prepare()
                         // If we're retrying, seek to the current position
                         if (isRetrying && currentPosition > 0) {
