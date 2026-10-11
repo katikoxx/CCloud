@@ -379,14 +379,20 @@ fun VideoPlayerScreen(
         try {
             when (fontSettings.fontType) {
                 com.pira.ccloud.data.model.FontType.DEFAULT -> null
-                com.pira.ccloud.data.model.FontType.VAZIRMATN -> {
-                    try {
-                        // Load the Vazirmatn font from assets
-                        Typeface.createFromAsset(context.assets, "font/vazirmatn_regular.ttf")
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
+                com.pira.ccloud.data.model.FontType.IRANSANS ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.iransans_400)
+                com.pira.ccloud.data.model.FontType.IRANCELL ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.irancell_2)
+                com.pira.ccloud.data.model.FontType.ESTEDAD ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.estedad_medium)
+                com.pira.ccloud.data.model.FontType.FARHANG ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.farhang_400)
+                com.pira.ccloud.data.model.FontType.GANDOM ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.gandom)
+                com.pira.ccloud.data.model.FontType.MAHSA_AMINI ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.mahsaaminiweb_regular)
+                com.pira.ccloud.data.model.FontType.VAZIRMATN ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
             }
         } catch (e: Exception) {
             null
