@@ -84,13 +84,14 @@ fun SingleMovieScreen(
     }
     
     // Directly render content without Scaffold since it's already in MainScreen's Scaffold
-    if (movie != null) {
+    val currentMovie = movie
+    if (currentMovie != null) {
         MovieDetailsContent(
-            movie = movie!!,
+            movie = currentMovie,
             onBackClick = { navController.popBackStack() },
             onPlayClick = { source ->
-                // Launch video player activity
-                VideoPlayerActivity.start(context, source.url, movie.id, movie.title, movie.cover)
+                // Launch video player activity with stable resume metadata.
+                VideoPlayerActivity.start(context, source.url, currentMovie.id, currentMovie.title, currentMovie.cover)
             },
             // Remove any padding from parent Scaffold to use full screen
             modifier = Modifier.fillMaxSize()
