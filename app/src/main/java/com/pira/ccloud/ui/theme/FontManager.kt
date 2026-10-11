@@ -18,6 +18,12 @@ object FontManager {
     fun loadFontFamily(context: Context, fontType: FontType): FontFamily? {
         return when (fontType) {
             FontType.DEFAULT -> null // Use system default
+            FontType.IRANSANS -> FontFamily(androidx.compose.ui.text.font.Font(com.pira.ccloud.R.font.iransans_400))
+            FontType.IRANCELL -> FontFamily(androidx.compose.ui.text.font.Font(com.pira.ccloud.R.font.irancell_2))
+            FontType.ESTEDAD -> FontFamily(androidx.compose.ui.text.font.Font(com.pira.ccloud.R.font.estedad_medium))
+            FontType.FARHANG -> FontFamily(androidx.compose.ui.text.font.Font(com.pira.ccloud.R.font.farhang_400))
+            FontType.GANDOM -> FontFamily(androidx.compose.ui.text.font.Font(com.pira.ccloud.R.font.gandom))
+            FontType.MAHSA_AMINI -> FontFamily(androidx.compose.ui.text.font.Font(com.pira.ccloud.R.font.mahsaaminiweb_regular))
             FontType.VAZIRMATN -> {
                 if (vazirmatnFontFamily == null) {
                     // Create a custom font family using resource identifiers
