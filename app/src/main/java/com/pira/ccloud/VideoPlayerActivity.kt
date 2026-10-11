@@ -164,6 +164,19 @@ class VideoPlayerActivity : ComponentActivity() {
             }
             context.startActivity(intent)
         }
+
+        fun startFromProgress(context: Context, progress: com.pira.ccloud.data.model.PlaybackProgress) {
+            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                putExtra(EXTRA_VIDEO_URL, progress.mediaUrl)
+                putExtra(EXTRA_MEDIA_KEY, progress.mediaKey)
+                putExtra(EXTRA_MEDIA_TITLE, progress.title)
+                putExtra(EXTRA_POSTER_URL, progress.posterUrl)
+                progress.seriesId?.let { putExtra(EXTRA_SERIES_ID, it) }
+                progress.seasonId?.let { putExtra(EXTRA_SEASON_ID, it) }
+                progress.episodeId?.let { putExtra(EXTRA_EPISODE_ID, it) }
+            }
+            context.startActivity(intent)
+        }
     }
     
     private var exoPlayer: ExoPlayer? = null
