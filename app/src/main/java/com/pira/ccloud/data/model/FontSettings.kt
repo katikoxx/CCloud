@@ -7,12 +7,18 @@ data class FontSettings(
     val fontType: FontType = FontType.DEFAULT
 ) {
     companion object {
-        // Default font settings
         val DEFAULT = FontSettings()
     }
 }
 
+@Serializable
 enum class FontType {
-    DEFAULT, // System default font
-    VAZIRMATN // Custom Vazirmatn font
+    DEFAULT,
+    IRANSANS,
+    IRANCELL,
+    ESTEDAD,
+    FARHANG,
+    GANDOM,
+    MAHSA_AMINI,
+    VAZIRMATN
 }
