@@ -149,11 +149,24 @@ class VideoPlayerActivity : ComponentActivity() {
         const val EXTRA_SERIES_ID = "series_id"
         const val EXTRA_SEASON_ID = "season_id"
         const val EXTRA_EPISODE_ID = "episode_id"
+        const val EXTRA_MEDIA_KEY = "media_key"
+        const val EXTRA_MEDIA_TITLE = "media_title"
+        const val EXTRA_POSTER_URL = "poster_url"
         const val REQUEST_WRITE_SETTINGS = 1001
         
         fun start(context: Context, videoUrl: String) {
             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                 putExtra(EXTRA_VIDEO_URL, videoUrl)
+            }
+            context.startActivity(intent)
+        }
+
+        fun start(context: Context, videoUrl: String, mediaId: Int, title: String, posterUrl: String?) {
+            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                putExtra(EXTRA_VIDEO_URL, videoUrl)
+                putExtra(EXTRA_MEDIA_KEY, "movie:$mediaId")
+                putExtra(EXTRA_MEDIA_TITLE, title)
+                putExtra(EXTRA_POSTER_URL, posterUrl)
             }
             context.startActivity(intent)
         }
@@ -209,11 +222,22 @@ class VideoPlayerActivity : ComponentActivity() {
         seriesId = intent.getIntExtra(EXTRA_SERIES_ID, -1).takeIf { it != -1 }
         seasonId = intent.getIntExtra(EXTRA_SEASON_ID, -1).takeIf { it != -1 }
         episodeId = intent.getIntExtra(EXTRA_EPISODE_ID, -1).takeIf { it != -1 }
-        
+        val mediaKey = intent.getStringExtra(EXTRA_MEDIA_KEY)
+            ?: if (episodeId != null && seriesId != null && seasonId != null) {
+                "episode:$seriesId:$seasonId:$episodeId"
+            } else {
+                "url:${videoUrl.orEmpty()}"
+            }
+        val mediaTitle = intent.getStringExtra(EXTRA_MEDIA_TITLE) ?: "Video"
+        val posterUrl = intent.getStringExtra(EXTRA_POSTER_URL)
+
         if (videoUrl != null) {
             setContent {
                 VideoPlayerScreen(
-                    videoUrl = videoUrl!!, 
+                    videoUrl = videoUrl!!,
+                    mediaKey = mediaKey,
+                    mediaTitle = mediaTitle,
+                    posterUrl = posterUrl,
                     seriesId = seriesId,
                     seasonId = seasonId,
                     episodeId = episodeId,
@@ -362,6 +386,9 @@ class VideoPlayerActivity : ComponentActivity() {
 @Composable
 fun VideoPlayerScreen(
     videoUrl: String,
+    mediaKey: String,
+    mediaTitle: String,
+    posterUrl: String?,
     seriesId: Int?,
     seasonId: Int?,
     episodeId: Int?,
@@ -369,6 +396,10 @@ fun VideoPlayerScreen(
     onPlayerReady: (ExoPlayer) -> Unit
 ) {
     val context = LocalContext.current
+    val savedProgress = remember(mediaKey) {
+        StorageUtils.loadAllPlaybackProgress(context).firstOrNull { it.mediaKey == mediaKey }
+    }
+    var didRestorePosition by remember(mediaKey) { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(true) }
     var currentPosition by remember { mutableStateOf(0L) }
     var duration by remember { mutableStateOf(0L) }
@@ -1060,11 +1091,9 @@ fun VideoPlayerScreen(
                             tint = Color.White
                         )
                     }
-                }
-                
-                                    // Pick an external SRT/VTT subtitle file.
+                    // Pick an external SRT/VTT subtitle file.
                     IconButton(
-                        onClick = { externalSubtitlePicker.launch(arrayOf("*/*")) },
+                        onClick = { externalSubtitlePicker.launch(arrayOf("application/x-subrip", "text/vtt", "text/plain", "*/*")) },
                         modifier = Modifier
                             .padding(top = 56.dp)
                             .size(48.dp)
@@ -1076,6 +1105,7 @@ fun VideoPlayerScreen(
                     ) {
                         Text("CC", color = Color.White, fontWeight = FontWeight.Bold)
                     }
+                }
 
 // Middle play/pause button
                 Box(
