@@ -8,10 +8,14 @@ import com.pira.ccloud.utils.DeviceUtils
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class SubtitleStyleType { CLASSIC, STEEL_EMBOSSED, WHITE_GLOW, DARK_BACKGROUND }
+
+@Serializable
 data class SubtitleSettings(
     val textColor: Int = Color.YELLOW,
     val borderColor: Int = Color.argb(128, 0, 0, 0), // Glass background (50% transparent black)
-    val textSize: Float = 17f
+    val textSize: Float = 17f,
+    val style: SubtitleStyleType = SubtitleStyleType.CLASSIC
 ) {
     companion object {
         // Default subtitle settings with transparent background
