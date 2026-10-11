@@ -601,6 +601,54 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
+                                // Preset subtitle looks. These are rendered by Media3's subtitle view.
+                                Text(
+                                    text = "Subtitle Style",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
+                                )
+                                val subtitleStyles = listOf(
+                                    com.pira.ccloud.data.model.SubtitleStyleType.CLASSIC to "کلاسیک",
+                                    com.pira.ccloud.data.model.SubtitleStyleType.STEEL_EMBOSSED to "فولاد برجسته",
+                                    com.pira.ccloud.data.model.SubtitleStyleType.WHITE_GLOW to "هاله سفید",
+                                    com.pira.ccloud.data.model.SubtitleStyleType.DARK_BACKGROUND to "پس‌زمینه تیره"
+                                )
+                                subtitleStyles.forEach { (style, label) ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                updateSubtitleSettings(subtitleSettings.copy(style = style))
+                                            }
+                                            .focusable()
+                                            .padding(vertical = 4.dp, horizontal = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = subtitleSettings.style == style,
+                                            onClick = { updateSubtitleSettings(subtitleSettings.copy(style = style)) }
+                                        )
+                                        Text(
+                                            text = label,
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            text = "نمونه زیرنویس فارسی",
+                                            color = if (style == com.pira.ccloud.data.model.SubtitleStyleType.DARK_BACKGROUND)
+                                                Color.White else Color(subtitleSettings.textColor),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    if (style == com.pira.ccloud.data.model.SubtitleStyleType.DARK_BACKGROUND)
+                                                        Color.Black else Color.Transparent
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
                                 
                                 // Text color setting
                                 SubtitleColorSetting(
