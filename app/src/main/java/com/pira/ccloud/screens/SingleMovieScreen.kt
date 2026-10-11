@@ -90,7 +90,7 @@ fun SingleMovieScreen(
             onBackClick = { navController.popBackStack() },
             onPlayClick = { source ->
                 // Launch video player activity
-                VideoPlayerActivity.start(context, source.url)
+                VideoPlayerActivity.start(context, source.url, movie.id, movie.title, movie.cover)
             },
             // Remove any padding from parent Scaffold to use full screen
             modifier = Modifier.fillMaxSize()
