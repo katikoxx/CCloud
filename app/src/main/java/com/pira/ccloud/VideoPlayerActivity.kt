@@ -526,6 +526,16 @@ fun VideoPlayerScreen(
             
             override fun onPlaybackStateChanged(playbackState: Int) {
                 try {
+                    if (playbackState == Player.STATE_READY && !didRestorePosition) {
+                        val resumeAt = savedProgress?.positionMs ?: 0L
+                        val savedDuration = savedProgress?.durationMs ?: 0L
+                        if (resumeAt > 0L && savedDuration > 0L &&
+                            resumeAt < (savedDuration * 0.95).toLong()) {
+                            exoPlayer?.seekTo(resumeAt)
+                            currentPosition = resumeAt
+                        }
+                        didRestorePosition = true
+                    }
                     if (playbackState == Player.STATE_READY) {
                         duration = exoPlayer?.duration ?: 0L
                         
@@ -673,11 +683,59 @@ fun VideoPlayerScreen(
         }
     }
     
-    // Clean up player
-    DisposableEffect(exoPlayer) {
+    // Save progress every five seconds, keeping storage writes infrequent on TV boxes.
+    LaunchedEffect(exoPlayer, mediaKey) {
+        val activePlayer = exoPlayer ?: return@LaunchedEffect
+        while (true) {
+            delay(5000)
+            val durationMs = activePlayer.duration
+            val positionMs = activePlayer.currentPosition
+            if (durationMs > 0L && positionMs > 0L) {
+                StorageUtils.savePlaybackProgress(
+                    context,
+                    com.pira.ccloud.data.model.PlaybackProgress(
+                        mediaKey = mediaKey,
+                        mediaUrl = videoUrl,
+                        title = mediaTitle,
+                        posterUrl = posterUrl,
+                        mediaType = if (seriesId != null) "episode" else "movie",
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        seriesId = seriesId,
+                        seasonId = seasonId,
+                        episodeId = episodeId
+                    )
+                )
+            }
+        }
+    }
+
+    // Save once more when the player leaves composition, then release resources.
+    DisposableEffect(exoPlayer, mediaKey) {
         onDispose {
             try {
-                exoPlayer?.release()
+                exoPlayer?.let { activePlayer ->
+                    val durationMs = activePlayer.duration
+                    val positionMs = activePlayer.currentPosition
+                    if (durationMs > 0L && positionMs > 0L) {
+                        StorageUtils.savePlaybackProgress(
+                            context,
+                            com.pira.ccloud.data.model.PlaybackProgress(
+                                mediaKey = mediaKey,
+                                mediaUrl = videoUrl,
+                                title = mediaTitle,
+                                posterUrl = posterUrl,
+                                mediaType = if (seriesId != null) "episode" else "movie",
+                                positionMs = positionMs,
+                                durationMs = durationMs,
+                                seriesId = seriesId,
+                                seasonId = seasonId,
+                                episodeId = episodeId
+                            )
+                        )
+                    }
+                    activePlayer.release()
+                }
             } catch (e: Exception) {
                 // Ignore release errors
             }
