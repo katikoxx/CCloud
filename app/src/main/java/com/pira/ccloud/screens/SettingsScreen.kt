@@ -601,6 +601,54 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
+                                // Preset subtitle looks. These are rendered by Media3's subtitle view.
+                                Text(
+                                    text = "Subtitle Style",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
+                                )
+                                val subtitleStyles = listOf(
+                                    com.pira.ccloud.data.model.SubtitleStyleType.CLASSIC to "کلاسیک",
+                                    com.pira.ccloud.data.model.SubtitleStyleType.STEEL_EMBOSSED to "فولاد برجسته",
+                                    com.pira.ccloud.data.model.SubtitleStyleType.WHITE_GLOW to "هاله سفید",
+                                    com.pira.ccloud.data.model.SubtitleStyleType.DARK_BACKGROUND to "پس‌زمینه تیره"
+                                )
+                                subtitleStyles.forEach { (style, label) ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                updateSubtitleSettings(subtitleSettings.copy(style = style))
+                                            }
+                                            .focusable()
+                                            .padding(vertical = 4.dp, horizontal = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        RadioButton(
+                                            selected = subtitleSettings.style == style,
+                                            onClick = { updateSubtitleSettings(subtitleSettings.copy(style = style)) }
+                                        )
+                                        Text(
+                                            text = label,
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            text = "نمونه زیرنویس فارسی",
+                                            color = if (style == com.pira.ccloud.data.model.SubtitleStyleType.DARK_BACKGROUND)
+                                                Color.White else Color(subtitleSettings.textColor),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(
+                                                    if (style == com.pira.ccloud.data.model.SubtitleStyleType.DARK_BACKGROUND)
+                                                        Color.Black else Color.Transparent
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
                                 
                                 // Text color setting
                                 SubtitleColorSetting(
@@ -733,30 +781,97 @@ fun SettingsScreen(
                         AnimatedVisibility(visible = isExpanded) {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text(
-                                    text = "Select Font",
+                                    text = "فونت زیرنویس",
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(bottom = 12.dp)
                                 )
-                                
-                                FontOption(
-                                    fontType = FontType.DEFAULT,
-                                    label = "System Default",
-                                    isSelected = fontSettings.fontType == FontType.DEFAULT,
-                                    onSelect = { fontType ->
-                                        val newSettings = fontSettings.copy(fontType = fontType)
-                                        updateFontSettings(newSettings)
-                                    }
+
+                                val fontChoices = listOf(
+                                    FontType.DEFAULT to "پیش‌فرض سیستم",
+                                    FontType.IRANSANS to "ایران‌سنس",
+                                    FontType.IRANCELL to "ایرانسل",
+                                    FontType.ESTEDAD to "استعداد",
+                                    FontType.FARHANG to "فرهنگ",
+                                    FontType.GANDOM to "گندم",
+                                    FontType.MAHSA_AMINI to "مهسا امینی",
+                                    FontType.VAZIRMATN to "وزیرمتن"
                                 )
-                                
-                                FontOption(
-                                    fontType = FontType.VAZIRMATN,
-                                    label = "Vazirmatn",
-                                    isSelected = fontSettings.fontType == FontType.VAZIRMATN,
-                                    onSelect = { fontType ->
-                                        val newSettings = fontSettings.copy(fontType = fontType)
-                                        updateFontSettings(newSettings)
+                                fun previewFont(fontType: FontType): androidx.compose.ui.text.font.FontFamily =
+                                    when (fontType) {
+                                        FontType.DEFAULT -> androidx.compose.ui.text.font.FontFamily.Default
+                                        FontType.IRANSANS -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.iransans_400))
+                                        FontType.IRANCELL -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.irancell_2))
+                                        FontType.ESTEDAD -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.estedad_medium))
+                                        FontType.FARHANG -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.farhang_400))
+                                        FontType.GANDOM -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.gandom))
+                                        FontType.MAHSA_AMINI -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.mahsaaminiweb_regular))
+                                        FontType.VAZIRMATN -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.vazirmatn_regular))
                                     }
-                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Column(modifier = Modifier.weight(0.9f)) {
+                                        Text(
+                                            text = "نمایش زنده",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                        Text(
+                                            text = "این یک نمونه زیرنویس فارسی است",
+                                            fontFamily = previewFont(fontSettings.fontType),
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "فونت انتخاب‌شده در پخش ویدیو برای زیرنویس اعمال می‌شود.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1.1f)) {
+                                        fontChoices.forEach { (fontType, label) ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth()
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(
+                                                        if (fontSettings.fontType == fontType)
+                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                                        else Color.Transparent
+                                                    )
+                                                    .clickable {
+                                                        updateFontSettings(fontSettings.copy(fontType = fontType))
+                                                    }
+                                                    .focusable()
+                                                    .padding(horizontal = 8.dp, vertical = 7.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                RadioButton(
+                                                    selected = fontSettings.fontType == fontType,
+                                                    onClick = { updateFontSettings(fontSettings.copy(fontType = fontType)) }
+                                                )
+                                                Text(
+                                                    text = label,
+                                                    fontFamily = previewFont(fontType),
+                                                    modifier = Modifier.weight(1f),
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
+                                                if (fontSettings.fontType == fontType) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "انتخاب‌شده",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

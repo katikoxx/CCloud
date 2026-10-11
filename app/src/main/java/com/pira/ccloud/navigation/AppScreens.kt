@@ -3,6 +3,7 @@ package com.pira.ccloud.navigation
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Search
@@ -63,6 +64,12 @@ sealed class AppScreens(
         showSidebar = false
     )
 
+    data object ContinueWatching : AppScreens(
+        route = "continue_watching",
+        resourceId = R.string.continue_watching,
+        icon = Icons.Default.History
+    )
+
     data object Favorites : AppScreens(
         route = "favorites",
         resourceId = R.string.favorites,
@@ -87,6 +94,6 @@ sealed class AppScreens(
     )
 
     companion object {
-        val screens = listOf(Movies, Series, Search, Favorites, Settings)
+        val screens = listOf(Movies, Series, Search, ContinueWatching, Favorites, Settings)
     }
 }

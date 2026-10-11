@@ -23,6 +23,8 @@ import android.widget.FrameLayout
 import kotlin.math.abs
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -79,6 +81,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.TrackGroup
@@ -90,6 +93,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.pira.ccloud.data.model.SubtitleSettings
+import com.pira.ccloud.data.model.SubtitleStyleType
 import com.pira.ccloud.data.model.VideoPlayerSettings
 import com.pira.ccloud.data.model.FontSettings
 import com.pira.ccloud.data.model.WatchedEpisode
@@ -112,21 +116,31 @@ fun PlayerView.setSubtitleTextSize(spSize: Float) {
 
 // Extension function to set subtitle colors and font
 fun PlayerView.setSubtitleColors(settings: SubtitleSettings, typeface: Typeface? = null) {
-    // Create a custom CaptionStyleCompat with the typeface
-    // Use transparent background as default
+    val edgeType = when (settings.style) {
+        SubtitleStyleType.CLASSIC -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+        SubtitleStyleType.STEEL_EMBOSSED -> CaptionStyleCompat.EDGE_TYPE_RAISED
+        SubtitleStyleType.WHITE_GLOW -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
+        SubtitleStyleType.DARK_BACKGROUND -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+    }
+    val edgeColor = when (settings.style) {
+        SubtitleStyleType.WHITE_GLOW -> android.graphics.Color.WHITE
+        SubtitleStyleType.STEEL_EMBOSSED -> android.graphics.Color.DKGRAY
+        else -> settings.borderColor
+    }
+    val backgroundColor = if (settings.style == SubtitleStyleType.DARK_BACKGROUND) {
+        android.graphics.Color.argb(210, 0, 0, 0)
+    } else {
+        android.graphics.Color.TRANSPARENT
+    }
     val style = CaptionStyleCompat(
         settings.textColor,
-        android.graphics.Color.TRANSPARENT, // Always use transparent background
-        settings.borderColor,
-        CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-        settings.borderColor,
+        backgroundColor,
+        android.graphics.Color.TRANSPARENT,
+        edgeType,
+        edgeColor,
         typeface
     )
     subtitleView?.setStyle(style)
-    
-    // Note: ExoPlayer's subtitle rendering has limited support for custom fonts.
-    // The font may not be applied to all subtitle formats or on all Android versions.
-    // This is a known limitation of ExoPlayer's subtitle rendering system.
 }
 
 class VideoPlayerActivity : ComponentActivity() {
@@ -135,11 +149,24 @@ class VideoPlayerActivity : ComponentActivity() {
         const val EXTRA_SERIES_ID = "series_id"
         const val EXTRA_SEASON_ID = "season_id"
         const val EXTRA_EPISODE_ID = "episode_id"
+        const val EXTRA_MEDIA_KEY = "media_key"
+        const val EXTRA_MEDIA_TITLE = "media_title"
+        const val EXTRA_POSTER_URL = "poster_url"
         const val REQUEST_WRITE_SETTINGS = 1001
         
         fun start(context: Context, videoUrl: String) {
             val intent = Intent(context, VideoPlayerActivity::class.java).apply {
                 putExtra(EXTRA_VIDEO_URL, videoUrl)
+            }
+            context.startActivity(intent)
+        }
+
+        fun start(context: Context, videoUrl: String, mediaId: Int, title: String, posterUrl: String?) {
+            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                putExtra(EXTRA_VIDEO_URL, videoUrl)
+                putExtra(EXTRA_MEDIA_KEY, "movie:$mediaId")
+                putExtra(EXTRA_MEDIA_TITLE, title)
+                putExtra(EXTRA_POSTER_URL, posterUrl)
             }
             context.startActivity(intent)
         }
@@ -150,6 +177,21 @@ class VideoPlayerActivity : ComponentActivity() {
                 putExtra(EXTRA_SERIES_ID, seriesId)
                 putExtra(EXTRA_SEASON_ID, seasonId)
                 putExtra(EXTRA_EPISODE_ID, episodeId)
+                putExtra(EXTRA_MEDIA_KEY, "episode:$seriesId:$seasonId:$episodeId")
+                putExtra(EXTRA_MEDIA_TITLE, "Episode $episodeId")
+            }
+            context.startActivity(intent)
+        }
+
+        fun startFromProgress(context: Context, progress: com.pira.ccloud.data.model.PlaybackProgress) {
+            val intent = Intent(context, VideoPlayerActivity::class.java).apply {
+                putExtra(EXTRA_VIDEO_URL, progress.mediaUrl)
+                putExtra(EXTRA_MEDIA_KEY, progress.mediaKey)
+                putExtra(EXTRA_MEDIA_TITLE, progress.title)
+                putExtra(EXTRA_POSTER_URL, progress.posterUrl)
+                progress.seriesId?.let { putExtra(EXTRA_SERIES_ID, it) }
+                progress.seasonId?.let { putExtra(EXTRA_SEASON_ID, it) }
+                progress.episodeId?.let { putExtra(EXTRA_EPISODE_ID, it) }
             }
             context.startActivity(intent)
         }
@@ -180,11 +222,22 @@ class VideoPlayerActivity : ComponentActivity() {
         seriesId = intent.getIntExtra(EXTRA_SERIES_ID, -1).takeIf { it != -1 }
         seasonId = intent.getIntExtra(EXTRA_SEASON_ID, -1).takeIf { it != -1 }
         episodeId = intent.getIntExtra(EXTRA_EPISODE_ID, -1).takeIf { it != -1 }
-        
+        val mediaKey = intent.getStringExtra(EXTRA_MEDIA_KEY)
+            ?: if (episodeId != null && seriesId != null && seasonId != null) {
+                "episode:$seriesId:$seasonId:$episodeId"
+            } else {
+                "url:${videoUrl.orEmpty()}"
+            }
+        val mediaTitle = intent.getStringExtra(EXTRA_MEDIA_TITLE) ?: "Video"
+        val posterUrl = intent.getStringExtra(EXTRA_POSTER_URL)
+
         if (videoUrl != null) {
             setContent {
                 VideoPlayerScreen(
-                    videoUrl = videoUrl!!, 
+                    videoUrl = videoUrl!!,
+                    mediaKey = mediaKey,
+                    mediaTitle = mediaTitle,
+                    posterUrl = posterUrl,
                     seriesId = seriesId,
                     seasonId = seasonId,
                     episodeId = episodeId,
@@ -333,6 +386,9 @@ class VideoPlayerActivity : ComponentActivity() {
 @Composable
 fun VideoPlayerScreen(
     videoUrl: String,
+    mediaKey: String,
+    mediaTitle: String,
+    posterUrl: String?,
     seriesId: Int?,
     seasonId: Int?,
     episodeId: Int?,
@@ -340,6 +396,10 @@ fun VideoPlayerScreen(
     onPlayerReady: (ExoPlayer) -> Unit
 ) {
     val context = LocalContext.current
+    val savedProgress = remember(mediaKey) {
+        StorageUtils.loadAllPlaybackProgress(context).firstOrNull { it.mediaKey == mediaKey }
+    }
+    var didRestorePosition by remember(mediaKey) { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(true) }
     var currentPosition by remember { mutableStateOf(0L) }
     var duration by remember { mutableStateOf(0L) }
@@ -379,14 +439,20 @@ fun VideoPlayerScreen(
         try {
             when (fontSettings.fontType) {
                 com.pira.ccloud.data.model.FontType.DEFAULT -> null
-                com.pira.ccloud.data.model.FontType.VAZIRMATN -> {
-                    try {
-                        // Load the Vazirmatn font from assets
-                        Typeface.createFromAsset(context.assets, "font/vazirmatn_regular.ttf")
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
+                com.pira.ccloud.data.model.FontType.IRANSANS ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.iransans_400)
+                com.pira.ccloud.data.model.FontType.IRANCELL ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.irancell_2)
+                com.pira.ccloud.data.model.FontType.ESTEDAD ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.estedad_medium)
+                com.pira.ccloud.data.model.FontType.FARHANG ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.farhang_400)
+                com.pira.ccloud.data.model.FontType.GANDOM ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.gandom)
+                com.pira.ccloud.data.model.FontType.MAHSA_AMINI ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.mahsaaminiweb_regular)
+                com.pira.ccloud.data.model.FontType.VAZIRMATN ->
+                    androidx.core.content.res.ResourcesCompat.getFont(context, R.font.vazirmatn_regular)
             }
         } catch (e: Exception) {
             null
@@ -422,6 +488,9 @@ fun VideoPlayerScreen(
                 .build().apply {
                     try {
                         setMediaItem(MediaItem.fromUri(Uri.parse(videoUrl)))
+                        // ExoPlayer queues a seek requested before preparation, so restore
+                        // remains reliable even if STATE_READY arrives before listeners attach.
+                        savedProgress?.positionMs?.takeIf { it > 0L }?.let { seekTo(it) }
                         prepare()
                         // If we're retrying, seek to the current position
                         if (isRetrying && currentPosition > 0) {
@@ -442,6 +511,49 @@ fun VideoPlayerScreen(
         }
     }
     
+    val externalSubtitlePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { subtitleUri ->
+        if (subtitleUri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    subtitleUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Some document providers do not support persisted grants.
+            }
+            try {
+                exoPlayer?.let { player ->
+                    val extension = subtitleUri.lastPathSegment.orEmpty()
+                        .substringAfterLast('.', "").lowercase()
+                    val mimeType = when (extension) {
+                        "vtt" -> MimeTypes.TEXT_VTT
+                        "srt" -> MimeTypes.APPLICATION_SUBRIP
+                        else -> MimeTypes.APPLICATION_SUBRIP
+                    }
+                    val subtitle = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
+                        .setMimeType(mimeType)
+                        .setLanguage("und")
+                        .setLabel("External subtitle")
+                        .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                        .build()
+                    val mediaItem = MediaItem.Builder()
+                        .setUri(Uri.parse(videoUrl))
+                        .setSubtitleConfigurations(listOf(subtitle))
+                        .build()
+                    val resumePosition = player.currentPosition
+                    player.setMediaItem(mediaItem)
+                    player.prepare()
+                    player.seekTo(resumePosition)
+                    player.playWhenReady = isPlaying
+                }
+            } catch (_: Exception) {
+                playerError = "Could not load external subtitle"
+            }
+        }
+    }
+
     // Listen to track changes
     val trackListener = remember(exoPlayer) {
         object : Player.Listener {
@@ -526,6 +638,16 @@ fun VideoPlayerScreen(
             
             override fun onPlaybackStateChanged(playbackState: Int) {
                 try {
+                    if (playbackState == Player.STATE_READY && !didRestorePosition) {
+                        val resumeAt = savedProgress?.positionMs ?: 0L
+                        val savedDuration = savedProgress?.durationMs ?: 0L
+                        if (resumeAt > 0L && savedDuration > 0L &&
+                            resumeAt < (savedDuration * 0.95).toLong()) {
+                            exoPlayer?.seekTo(resumeAt)
+                            currentPosition = resumeAt
+                        }
+                        didRestorePosition = true
+                    }
                     if (playbackState == Player.STATE_READY) {
                         duration = exoPlayer?.duration ?: 0L
                         
@@ -673,11 +795,59 @@ fun VideoPlayerScreen(
         }
     }
     
-    // Clean up player
-    DisposableEffect(exoPlayer) {
+    // Save progress every five seconds, keeping storage writes infrequent on TV boxes.
+    LaunchedEffect(exoPlayer, mediaKey) {
+        val activePlayer = exoPlayer ?: return@LaunchedEffect
+        while (true) {
+            delay(5000)
+            val durationMs = activePlayer.duration
+            val positionMs = activePlayer.currentPosition
+            if (durationMs > 0L && positionMs > 0L) {
+                StorageUtils.savePlaybackProgress(
+                    context,
+                    com.pira.ccloud.data.model.PlaybackProgress(
+                        mediaKey = mediaKey,
+                        mediaUrl = videoUrl,
+                        title = mediaTitle,
+                        posterUrl = posterUrl,
+                        mediaType = if (seriesId != null) "episode" else "movie",
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        seriesId = seriesId,
+                        seasonId = seasonId,
+                        episodeId = episodeId
+                    )
+                )
+            }
+        }
+    }
+
+    // Save once more when the player leaves composition, then release resources.
+    DisposableEffect(exoPlayer, mediaKey) {
         onDispose {
             try {
-                exoPlayer?.release()
+                exoPlayer?.let { activePlayer ->
+                    val durationMs = activePlayer.duration
+                    val positionMs = activePlayer.currentPosition
+                    if (durationMs > 0L && positionMs > 0L) {
+                        StorageUtils.savePlaybackProgress(
+                            context,
+                            com.pira.ccloud.data.model.PlaybackProgress(
+                                mediaKey = mediaKey,
+                                mediaUrl = videoUrl,
+                                title = mediaTitle,
+                                posterUrl = posterUrl,
+                                mediaType = if (seriesId != null) "episode" else "movie",
+                                positionMs = positionMs,
+                                durationMs = durationMs,
+                                seriesId = seriesId,
+                                seasonId = seasonId,
+                                episodeId = episodeId
+                            )
+                        )
+                    }
+                    activePlayer.release()
+                }
             } catch (e: Exception) {
                 // Ignore release errors
             }
@@ -921,9 +1091,23 @@ fun VideoPlayerScreen(
                             tint = Color.White
                         )
                     }
+                    // Pick an external SRT/VTT subtitle file.
+                    IconButton(
+                        onClick = { externalSubtitlePicker.launch(arrayOf("application/x-subrip", "text/vtt", "text/plain", "*/*")) },
+                        modifier = Modifier
+                            .padding(top = 56.dp)
+                            .size(48.dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .align(Alignment.TopEnd)
+                    ) {
+                        Text("CC", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
-                
-                // Middle play/pause button
+
+// Middle play/pause button
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
