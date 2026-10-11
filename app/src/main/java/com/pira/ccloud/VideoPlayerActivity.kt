@@ -23,6 +23,8 @@ import android.widget.FrameLayout
 import kotlin.math.abs
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -79,6 +81,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.TrackGroup
@@ -477,6 +480,49 @@ fun VideoPlayerScreen(
         }
     }
     
+    val externalSubtitlePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { subtitleUri ->
+        if (subtitleUri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    subtitleUri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Some document providers do not support persisted grants.
+            }
+            try {
+                exoPlayer?.let { player ->
+                    val extension = subtitleUri.lastPathSegment.orEmpty()
+                        .substringAfterLast('.', "").lowercase()
+                    val mimeType = when (extension) {
+                        "vtt" -> MimeTypes.TEXT_VTT
+                        "srt" -> MimeTypes.APPLICATION_SUBRIP
+                        else -> MimeTypes.APPLICATION_SUBRIP
+                    }
+                    val subtitle = MediaItem.SubtitleConfiguration.Builder(subtitleUri)
+                        .setMimeType(mimeType)
+                        .setLanguage("und")
+                        .setLabel("External subtitle")
+                        .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                        .build()
+                    val mediaItem = MediaItem.Builder()
+                        .setUri(Uri.parse(videoUrl))
+                        .setSubtitleConfigurations(listOf(subtitle))
+                        .build()
+                    val resumePosition = player.currentPosition
+                    player.setMediaItem(mediaItem)
+                    player.prepare()
+                    player.seekTo(resumePosition)
+                    player.playWhenReady = isPlaying
+                }
+            } catch (_: Exception) {
+                playerError = "Could not load external subtitle"
+            }
+        }
+    }
+
     // Listen to track changes
     val trackListener = remember(exoPlayer) {
         object : Player.Listener {
@@ -1016,7 +1062,22 @@ fun VideoPlayerScreen(
                     }
                 }
                 
-                // Middle play/pause button
+                                    // Pick an external SRT/VTT subtitle file.
+                    IconButton(
+                        onClick = { externalSubtitlePicker.launch(arrayOf("*/*")) },
+                        modifier = Modifier
+                            .padding(top = 56.dp)
+                            .size(48.dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                shape = androidx.compose.foundation.shape.CircleShape
+                            )
+                            .align(Alignment.TopEnd)
+                    ) {
+                        Text("CC", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+
+// Middle play/pause button
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
