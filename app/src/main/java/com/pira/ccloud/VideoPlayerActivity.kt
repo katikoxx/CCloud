@@ -90,6 +90,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import com.pira.ccloud.data.model.SubtitleSettings
+import com.pira.ccloud.data.model.SubtitleStyleType
 import com.pira.ccloud.data.model.VideoPlayerSettings
 import com.pira.ccloud.data.model.FontSettings
 import com.pira.ccloud.data.model.WatchedEpisode
@@ -112,21 +113,31 @@ fun PlayerView.setSubtitleTextSize(spSize: Float) {
 
 // Extension function to set subtitle colors and font
 fun PlayerView.setSubtitleColors(settings: SubtitleSettings, typeface: Typeface? = null) {
-    // Create a custom CaptionStyleCompat with the typeface
-    // Use transparent background as default
+    val edgeType = when (settings.style) {
+        SubtitleStyleType.CLASSIC -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+        SubtitleStyleType.STEEL_EMBOSSED -> CaptionStyleCompat.EDGE_TYPE_RAISED
+        SubtitleStyleType.WHITE_GLOW -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
+        SubtitleStyleType.DARK_BACKGROUND -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+    }
+    val edgeColor = when (settings.style) {
+        SubtitleStyleType.WHITE_GLOW -> android.graphics.Color.WHITE
+        SubtitleStyleType.STEEL_EMBOSSED -> android.graphics.Color.DKGRAY
+        else -> settings.borderColor
+    }
+    val backgroundColor = if (settings.style == SubtitleStyleType.DARK_BACKGROUND) {
+        android.graphics.Color.argb(210, 0, 0, 0)
+    } else {
+        android.graphics.Color.TRANSPARENT
+    }
     val style = CaptionStyleCompat(
         settings.textColor,
-        android.graphics.Color.TRANSPARENT, // Always use transparent background
-        settings.borderColor,
-        CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-        settings.borderColor,
+        backgroundColor,
+        android.graphics.Color.TRANSPARENT,
+        edgeType,
+        edgeColor,
         typeface
     )
     subtitleView?.setStyle(style)
-    
-    // Note: ExoPlayer's subtitle rendering has limited support for custom fonts.
-    // The font may not be applied to all subtitle formats or on all Android versions.
-    // This is a known limitation of ExoPlayer's subtitle rendering system.
 }
 
 class VideoPlayerActivity : ComponentActivity() {
