@@ -10,6 +10,7 @@ import com.pira.ccloud.data.model.SubtitleSettings
 import com.pira.ccloud.data.model.VideoPlayerSettings
 import com.pira.ccloud.data.model.FontSettings
 import com.pira.ccloud.data.model.WatchedEpisode
+import com.pira.ccloud.data.model.PlaybackProgress
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -595,6 +596,63 @@ object StorageUtils {
         }
     }
     
+    // Playback progress functions for the Continue Watching row.
+    // The key identifies one movie or one specific series episode.
+    fun savePlaybackProgress(context: Context, progress: PlaybackProgress) {
+        try {
+            val entries = loadAllPlaybackProgress(context).toMutableList()
+            entries.removeAll { it.mediaKey == progress.mediaKey }
+
+            // Remove entries that are effectively complete instead of showing them again.
+            val completed = progress.durationMs > 0L &&
+                progress.positionMs >= (progress.durationMs * 0.95).toLong()
+            if (!completed && progress.positionMs > 0L) {
+                entries.add(progress.copy(updatedAt = System.currentTimeMillis()))
+            }
+
+            val file = File(context.filesDir, "playback_progress.json")
+            file.writeText(Json.encodeToString(entries.sortedByDescending { it.updatedAt }))
+            Log.d(TAG, "Playback progress saved: ${progress.mediaKey}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving playback progress", e)
+        }
+    }
+
+    fun loadAllPlaybackProgress(context: Context): List<PlaybackProgress> {
+        return try {
+            val file = File(context.filesDir, "playback_progress.json")
+            if (file.exists()) {
+                Json.decodeFromString<List<PlaybackProgress>>(file.readText())
+                    .sortedByDescending { it.updatedAt }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading playback progress", e)
+            emptyList()
+        }
+    }
+
+    fun removePlaybackProgress(context: Context, mediaKey: String) {
+        try {
+            val entries = loadAllPlaybackProgress(context)
+                .filterNot { it.mediaKey == mediaKey }
+            File(context.filesDir, "playback_progress.json")
+                .writeText(Json.encodeToString(entries))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error removing playback progress", e)
+        }
+    }
+
+    fun clearAllPlaybackProgress(context: Context) {
+        try {
+            val file = File(context.filesDir, "playback_progress.json")
+            if (file.exists()) file.delete()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error clearing playback progress", e)
+        }
+    }
+
     fun clearAllWatchedEpisodes(context: Context) {
         try {
             val file = File(context.filesDir, "watched_episodes.json")
